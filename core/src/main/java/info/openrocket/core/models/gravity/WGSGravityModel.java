@@ -5,11 +5,19 @@ import info.openrocket.core.util.ModID;
 import info.openrocket.core.util.WorldCoordinate;
 
 /**
- * A gravity model based on the WGS84 ellipsoid.
- * 
- * @author Richard Graham <richard@rdg.cc>
+ * A gravity model for a spherical body with a configurable surface gravity.
+ * Originally based on the WGS84 ellipsoid model by Richard Graham
+ * <richard@rdg.cc>; the Earth-specific latitude term has been removed.
  */
 public class WGSGravityModel implements GravityModel {
+
+	// Surface gravity (m/s^2) and mean radius (m) of the body.
+	// Currently set to the Moon. Examples:
+	//   Mars: 3.71 and 3_389_500.0
+	//   Earth (no oblateness): 9.80665 and 6_371_000.0
+	// Verify these constants against a source you trust before relying on them.
+	private static final double G_SURFACE = 1.62;
+	private static final double BODY_RADIUS = 1_737_400.0;
 
 	// Cache the previously computed value
 	private WorldCoordinate lastWorldCoordinate;
@@ -35,18 +43,9 @@ public class WGSGravityModel implements GravityModel {
 	}
 
 	private double calcGravity(WorldCoordinate wc) {
-
-		double sin2lat = MathUtil.pow2(Math.sin(wc.getLatitudeRad()));
-		double g_0 = 9.7803267714 * ((1.0 + 0.00193185138639 * sin2lat) / Math.sqrt(1.0 - 0.00669437999013 * sin2lat));
-
-		// Apply correction due to altitude. Note this assumes a spherical earth, but it
-		// is a small correction
-		// so it probably doesn't really matter. Also does not take into account gravity
-		// of the atmosphere, again
-		// correction could be done but not really necessary.
-		double g_alt = g_0 * MathUtil.pow2(WorldCoordinate.REARTH / (WorldCoordinate.REARTH + wc.getAltitude()));
-
-		return g_alt;
+		// Inverse-square falloff with altitude, assuming a spherical body.
+		// For constant gravity with no altitude effect, return G_SURFACE directly.
+		return G_SURFACE * MathUtil.pow2(BODY_RADIUS / (BODY_RADIUS + wc.getAltitude()));
 	}
 
 }
